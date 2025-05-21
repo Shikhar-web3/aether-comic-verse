@@ -6,10 +6,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
-import { MessageCircle, Image, Eye, Sparkles, History, X, Send, Plus, Download, Share, Info, Settings, Zap, Users } from "lucide-react";
+import { MessageCircle, Image, Eye, Sparkles, History, Send, Plus, Download, Share, Info, Settings, Zap, Users } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import WalletModal from "@/components/wallet/WalletModal";
 import StoryProtocolRegister from "@/components/ip/StoryProtocolRegister";
+import StoryProtocolInfo from "@/components/ip/StoryProtocolInfo";
 import { useToast } from "@/hooks/use-toast";
 
 const Workshop = () => {
@@ -18,6 +19,7 @@ const Workshop = () => {
   const { isConnected, connectWallet } = useWallet();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isIPModalOpen, setIsIPModalOpen] = useState(false);
+  const [isIPInfoOpen, setIsIPInfoOpen] = useState(false);
   const { toast } = useToast();
 
   const characters = [
@@ -83,6 +85,14 @@ const Workshop = () => {
               onClick={handleRegisterIP}
             >
               <Zap className="mr-2 h-4 w-4" /> Register IP
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/60 hover:text-white"
+              onClick={() => setIsIPInfoOpen(true)}
+            >
+              <Info className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -322,6 +332,11 @@ const Workshop = () => {
       <StoryProtocolRegister 
         isOpen={isIPModalOpen} 
         setIsOpen={setIsIPModalOpen} 
+      />
+
+      <StoryProtocolInfo
+        isOpen={isIPInfoOpen}
+        setIsOpen={setIsIPInfoOpen}
       />
     </MainLayout>
   );

@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
-import { HelpCircle, Menu, Plus, Search, User, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { HelpCircle, Menu, Plus, Search, User, LogOut, X, Info } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import WalletModal from "../wallet/WalletModal";
 import { useWallet } from "@/context/WalletContext";
 import { 
@@ -14,11 +14,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 
 const Header = () => {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { address, isConnected, walletType, connectWallet, disconnectWallet } = useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleConnectWallet = async (walletType: string) => {
     await connectWallet(walletType);
@@ -28,6 +42,19 @@ const Header = () => {
   const formatAddress = (address: string | null) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      toast({
+        title: "Search initiated",
+        description: `Searching for: "${searchQuery}"`,
+      });
+      navigate(`/explore?search=${encodeURIComponent(searchQuery)}`);
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
   };
 
   return (
@@ -62,10 +89,20 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="rounded-full text-white/70 hover:text-white">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-white/70 hover:text-white"
+            onClick={() => setIsSearchOpen(true)}
+          >
             <Search className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full text-white/70 hover:text-white">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-white/70 hover:text-white"
+            onClick={() => setIsInfoModalOpen(true)}
+          >
             <HelpCircle className="h-5 w-5" />
           </Button>
           
@@ -134,11 +171,79 @@ const Header = () => {
         </div>
       </div>
       
+      {/* Wallet Modal */}
       <WalletModal 
         isOpen={isWalletModalOpen} 
         setIsOpen={setIsWalletModalOpen} 
         onConnect={handleConnectWallet} 
       />
+
+      {/* Search Dialog */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="bg-white/5 backdrop-blur-md border border-white/10 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-orbitron">Search ComicCosmos</DialogTitle>
+            <DialogDescription>
+              Find comics, creators, and characters
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" />
+              <Input 
+                placeholder="Search comics, creators, characters..." 
+                className="pl-10 bg-white/5 border-white/10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="bg-gradient-to-r from-electric-blue to-neon-purple">
+                Search
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Dialog */}
+      <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
+        <DialogContent className="bg-white/5 backdrop-blur-md border border-white/10">
+          <DialogHeader>
+            <DialogTitle className="font-orbitron flex items-center gap-2">
+              <Info className="h-5 w-5 text-electric-blue" />
+              About ComicCosmos
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              ComicCosmos is a Web3 collaborative platform for creating, sharing, and owning digital comics using AI and blockchain technology.
+            </p>
+            
+            <h4 className="font-bold text-electric-blue">Key Features:</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Collaborate with friends to create stunning AI-powered comics</li>
+              <li>Register your IP on Story Protocol to establish ownership</li>
+              <li>Share and monetize your creations with built-in Web3 tools</li>
+              <li>Explore trending comics from creators worldwide</li>
+            </ul>
+            
+            <h4 className="font-bold text-electric-blue">Story Protocol Integration:</h4>
+            <p>
+              ComicCosmos uses Story Protocol to help creators establish and protect their intellectual property rights on-chain. This enables revenue sharing, licensing, and collaborative ownership in a decentralized way.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              className="border-electric-blue/50 text-electric-blue hover:bg-electric-blue/10"
+              onClick={() => setIsInfoModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
