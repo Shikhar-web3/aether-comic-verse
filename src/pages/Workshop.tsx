@@ -7,10 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { MessageCircle, Image, Eye, Sparkles, History, X, Send, Plus, Download, Share, Info, Settings, Zap, Users } from "lucide-react";
+import { useWallet } from "@/context/WalletContext";
+import WalletModal from "@/components/wallet/WalletModal";
+import StoryProtocolRegister from "@/components/ip/StoryProtocolRegister";
+import { useToast } from "@/hooks/use-toast";
 
 const Workshop = () => {
   const [generating, setGenerating] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState<number | null>(null);
+  const { isConnected, connectWallet } = useWallet();
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isIPModalOpen, setIsIPModalOpen] = useState(false);
+  const { toast } = useToast();
 
   const characters = [
     { name: "Astro Nova", avatar: "https://i.pravatar.cc/100?img=1" },
@@ -23,6 +31,24 @@ const Workshop = () => {
     setTimeout(() => {
       setGenerating(false);
     }, 3000);
+  };
+
+  const handleRegisterIP = () => {
+    if (!isConnected) {
+      setIsWalletModalOpen(true);
+      toast({
+        title: "Connect Wallet",
+        description: "Please connect your wallet to register your comic IP",
+      });
+      return;
+    }
+    
+    setIsIPModalOpen(true);
+  };
+
+  const handleConnectWallet = async (walletType: string) => {
+    await connectWallet(walletType);
+    setIsWalletModalOpen(false);
   };
 
   return (
@@ -51,7 +77,11 @@ const Workshop = () => {
             <Button variant="outline" className="bg-white/5 border-white/10" size="sm">
               <Download className="mr-2 h-4 w-4" /> Export
             </Button>
-            <Button className="bg-gradient-to-r from-electric-blue to-neon-purple" size="sm">
+            <Button 
+              className="bg-gradient-to-r from-electric-blue to-neon-purple" 
+              size="sm"
+              onClick={handleRegisterIP}
+            >
               <Zap className="mr-2 h-4 w-4" /> Register IP
             </Button>
           </div>
@@ -281,6 +311,18 @@ const Workshop = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <WalletModal 
+        isOpen={isWalletModalOpen} 
+        setIsOpen={setIsWalletModalOpen} 
+        onConnect={handleConnectWallet} 
+      />
+      
+      <StoryProtocolRegister 
+        isOpen={isIPModalOpen} 
+        setIsOpen={setIsIPModalOpen} 
+      />
     </MainLayout>
   );
 };
