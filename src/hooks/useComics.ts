@@ -43,6 +43,15 @@ export interface Character {
   updated_at: string;
 }
 
+interface CreateComicData {
+  title: string;
+  description?: string;
+  cover_image?: string;
+  genre?: string;
+  status?: 'draft' | 'published';
+  tags?: string[];
+}
+
 export const useComics = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -63,14 +72,19 @@ export const useComics = () => {
   });
 
   const createComicMutation = useMutation({
-    mutationFn: async (comicData: Partial<Comic>) => {
+    mutationFn: async (comicData: CreateComicData) => {
       if (!user?.id) throw new Error('No user found');
 
       const { data, error } = await supabase
         .from('comics')
         .insert({
-          ...comicData,
+          title: comicData.title,
+          description: comicData.description,
+          cover_image: comicData.cover_image,
+          genre: comicData.genre,
+          status: comicData.status || 'draft',
           creator_id: user.id,
+          tags: comicData.tags,
         })
         .select()
         .single();
@@ -95,7 +109,7 @@ export const useComics = () => {
   });
 
   const updateComicMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Comic> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<CreateComicData> }) => {
       const { data, error } = await supabase
         .from('comics')
         .update({ ...updates, updated_at: new Date().toISOString() })
