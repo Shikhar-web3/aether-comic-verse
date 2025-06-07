@@ -1,8 +1,6 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/components/ui/use-toast';
 
 interface Profile {
   id: string;
@@ -16,60 +14,39 @@ interface Profile {
 
 export const useProfile = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const { data: profile, isLoading, error } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      return data as Profile;
-    },
-    enabled: !!user?.id,
-  });
-
-  const updateProfileMutation = useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
-      if (!user?.id) throw new Error('No user found');
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive"
-      });
+  useEffect(() => {
+    if (user) {
+      // Create demo profile from user data
+      const demoProfile: Profile = {
+        id: user.id,
+        username: user.username || 'demo_user',
+        full_name: user.full_name || 'Demo User',
+        avatar_url: 'https://via.placeholder.com/150?text=Demo',
+        bio: 'Comic creator using ComicCosmos demo',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setProfile(demoProfile);
+    } else {
+      setProfile(null);
     }
-  });
+  }, [user]);
+
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!profile) return { error: new Error('No profile found') };
+    
+    const updatedProfile = { ...profile, ...updates, updated_at: new Date().toISOString() };
+    setProfile(updatedProfile);
+    
+    return { error: null };
+  };
 
   return {
     profile,
-    isLoading,
-    error,
-    updateProfile: updateProfileMutation.mutate,
-    isUpdating: updateProfileMutation.isPending
+    loading,
+    updateProfile
   };
 };
