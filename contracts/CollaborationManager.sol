@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,16 +6,13 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
- * @title CollaborationManager
- * @dev Manages collaborative comic projects and permissions
- * Features:
- * - Multi-creator projects
- * - Permission management
- * - Voting mechanisms
- * - Revenue sharing agreements
- */
+@title CollaborationManager
+@dev Manages collaborative comic projects and permissions
+*/
 contract CollaborationManager is Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
+
+    constructor() Ownable(msg.sender) {}
 
     // Events
     event ProjectCreated(uint256 indexed projectId, address indexed creator, string title);
@@ -48,7 +44,7 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
     struct Collaborator {
         address collaboratorAddress;
         string role;
-        uint256 revenueShare; // Basis points (100 = 1%)
+        uint256 revenueShare;
         mapping(Permission => bool) permissions;
         InvitationStatus invitationStatus;
         uint256 joinedAt;
@@ -67,7 +63,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         mapping(address => bool) vote;
     }
 
-    // State variables
     Counters.Counter private _projectIdCounter;
     Counters.Counter private _voteIdCounter;
 
@@ -78,9 +73,8 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
     mapping(address => uint256[]) public userProjects;
 
     uint256 public constant VOTE_DURATION = 7 days;
-    uint256 public constant MIN_VOTE_THRESHOLD = 51; // 51% to pass
+    uint256 public constant MIN_VOTE_THRESHOLD = 51;
 
-    // Modifiers
     modifier onlyProjectCreator(uint256 projectId) {
         require(projects[projectId].creator == msg.sender, "Not project creator");
         _;
@@ -93,7 +87,7 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
 
     modifier hasPermission(uint256 projectId, Permission permission) {
         require(
-            projects[projectId].creator == msg.sender || 
+            projects[projectId].creator == msg.sender ||
             collaborators[projectId][msg.sender].permissions[permission],
             "Insufficient permissions"
         );
@@ -110,26 +104,18 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         _;
     }
 
-    /**
-     * @dev Create a new collaborative project
-     * @param title Project title
-     * @param description Project description
-     */
-    function createProject(
-        string memory title,
-        string memory description
-    ) public returns (uint256) {
+    function createProject(string memory title, string memory description) public returns (uint256) {
         require(bytes(title).length > 0, "Title required");
 
         uint256 projectId = _projectIdCounter.current();
         _projectIdCounter.increment();
 
-        projects[projectId].title = title;
-        projects[projectId].description = description;
-        projects[projectId].creator = msg.sender;
-        projects[projectId].status = ProjectStatus.Active;
-        projects[projectId].createdAt = block.timestamp;
-        projects[projectId].collaboratorCount = 0;
+        Project storage project = projects[projectId];
+        project.title = title;
+        project.description = description;
+        project.creator = msg.sender;
+        project.status = ProjectStatus.Active;
+        project.createdAt = block.timestamp;
 
         userProjects[msg.sender].push(projectId);
 
@@ -137,14 +123,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         return projectId;
     }
 
-    /**
-     * @dev Invite a collaborator to a project
-     * @param projectId Project identifier
-     * @param collaboratorAddress Address of the collaborator
-     * @param role Role of the collaborator
-     * @param revenueShare Revenue share in basis points
-     * @param permissions Array of permissions to grant
-     */
     function inviteCollaborator(
         uint256 projectId,
         address collaboratorAddress,
@@ -162,7 +140,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         collaborator.revenueShare = revenueShare;
         collaborator.invitationStatus = InvitationStatus.Pending;
 
-        // Set permissions
         for (uint256 i = 0; i < permissions.length; i++) {
             collaborator.permissions[permissions[i]] = true;
         }
@@ -170,10 +147,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         emit CollaboratorInvited(projectId, collaboratorAddress, role);
     }
 
-    /**
-     * @dev Accept collaboration invitation
-     * @param projectId Project identifier
-     */
     function acceptInvitation(uint256 projectId) public validProject(projectId) {
         Collaborator storage collaborator = collaborators[projectId][msg.sender];
         require(collaborator.invitationStatus == InvitationStatus.Pending, "No pending invitation");
@@ -190,10 +163,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         emit InvitationAccepted(projectId, msg.sender);
     }
 
-    /**
-     * @dev Reject collaboration invitation
-     * @param projectId Project identifier
-     */
     function rejectInvitation(uint256 projectId) public validProject(projectId) {
         Collaborator storage collaborator = collaborators[projectId][msg.sender];
         require(collaborator.invitationStatus == InvitationStatus.Pending, "No pending invitation");
@@ -201,12 +170,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         collaborator.invitationStatus = InvitationStatus.Rejected;
     }
 
-    /**
-     * @dev Create a vote for project decisions
-     * @param projectId Project identifier
-     * @param description Vote description
-     * @param proposalData Encoded proposal data
-     */
     function createVote(
         uint256 projectId,
         string memory description,
@@ -231,17 +194,9 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         return voteId;
     }
 
-    /**
-     * @dev Cast a vote on a proposal
-     * @param projectId Project identifier
-     * @param voteId Vote identifier
-     * @param voteChoice True for yes, false for no
-     */
-    function castVote(
-        uint256 projectId,
-        uint256 voteId,
-        bool voteChoice
-    ) public validProject(projectId) onlyCollaborator(projectId) {
+    function castVote(uint256 projectId, uint256 voteId, bool voteChoice)
+        public validProject(projectId) onlyCollaborator(projectId)
+    {
         Vote storage vote = votes[projectId][voteId];
         require(vote.status == VoteStatus.Active, "Vote not active");
         require(block.timestamp < vote.expiresAt, "Vote expired");
@@ -259,11 +214,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         emit VoteCast(projectId, voteId, msg.sender, voteChoice);
     }
 
-    /**
-     * @dev Execute a vote if it has passed
-     * @param projectId Project identifier
-     * @param voteId Vote identifier
-     */
     function executeVote(uint256 projectId, uint256 voteId) public validProject(projectId) {
         Vote storage vote = votes[projectId][voteId];
         require(vote.status == VoteStatus.Active, "Vote not active");
@@ -282,12 +232,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         emit VoteExecuted(projectId, voteId, passed);
     }
 
-    /**
-     * @dev Update revenue share for a collaborator
-     * @param projectId Project identifier
-     * @param collaboratorAddress Collaborator address
-     * @param newShare New revenue share in basis points
-     */
     function updateRevenueShare(
         uint256 projectId,
         address collaboratorAddress,
@@ -301,24 +245,12 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         emit RevenueShareUpdated(projectId, collaboratorAddress, newShare);
     }
 
-    /**
-     * @dev Update project status
-     * @param projectId Project identifier
-     * @param newStatus New project status
-     */
-    function updateProjectStatus(
-        uint256 projectId,
-        ProjectStatus newStatus
-    ) public validProject(projectId) onlyProjectCreator(projectId) {
+    function updateProjectStatus(uint256 projectId, ProjectStatus newStatus)
+        public validProject(projectId) onlyProjectCreator(projectId)
+    {
         projects[projectId].status = newStatus;
     }
 
-    /**
-     * @dev Grant permission to a collaborator
-     * @param projectId Project identifier
-     * @param collaboratorAddress Collaborator address
-     * @param permission Permission to grant
-     */
     function grantPermission(
         uint256 projectId,
         address collaboratorAddress,
@@ -328,12 +260,6 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         collaborators[projectId][collaboratorAddress].permissions[permission] = true;
     }
 
-    /**
-     * @dev Revoke permission from a collaborator
-     * @param projectId Project identifier
-     * @param collaboratorAddress Collaborator address
-     * @param permission Permission to revoke
-     */
     function revokePermission(
         uint256 projectId,
         address collaboratorAddress,
@@ -343,20 +269,19 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         collaborators[projectId][collaboratorAddress].permissions[permission] = false;
     }
 
-    // View functions
-    
-    /**
-     * @dev Get project information
-     * @param projectId Project identifier
-     */
-    function getProject(uint256 projectId) public view validProject(projectId) returns (
-        string memory title,
-        string memory description,
-        address creator,
-        ProjectStatus status,
-        uint256 createdAt,
-        uint256 collaboratorCount
-    ) {
+    // View Functions
+
+    function getProject(uint256 projectId)
+        public view validProject(projectId)
+        returns (
+            string memory title,
+            string memory description,
+            address creator,
+            ProjectStatus status,
+            uint256 createdAt,
+            uint256 collaboratorCount
+        )
+    {
         Project storage project = projects[projectId];
         return (
             project.title,
@@ -368,17 +293,15 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         );
     }
 
-    /**
-     * @dev Get collaborator information
-     * @param projectId Project identifier
-     * @param collaboratorAddress Collaborator address
-     */
-    function getCollaborator(uint256 projectId, address collaboratorAddress) public view returns (
-        string memory role,
-        uint256 revenueShare,
-        InvitationStatus invitationStatus,
-        uint256 joinedAt
-    ) {
+    function getCollaborator(uint256 projectId, address collaboratorAddress)
+        public view
+        returns (
+            string memory role,
+            uint256 revenueShare,
+            InvitationStatus invitationStatus,
+            uint256 joinedAt
+        )
+    {
         Collaborator storage collaborator = collaborators[projectId][collaboratorAddress];
         return (
             collaborator.role,
@@ -388,13 +311,7 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         );
     }
 
-    /**
-     * @dev Check if an address has a specific permission
-     * @param projectId Project identifier
-     * @param collaboratorAddress Collaborator address
-     * @param permission Permission to check
-     */
-    function hasPermission(
+    function checkPermission(
         uint256 projectId,
         address collaboratorAddress,
         Permission permission
@@ -403,22 +320,21 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
             return true;
         }
         return collaborators[projectId][collaboratorAddress].permissions[permission];
-    }
+}
 
-    /**
-     * @dev Get vote information
-     * @param projectId Project identifier
-     * @param voteId Vote identifier
-     */
-    function getVote(uint256 projectId, uint256 voteId) public view returns (
-        string memory description,
-        address proposer,
-        uint256 createdAt,
-        uint256 expiresAt,
-        VoteStatus status,
-        uint256 yesVotes,
-        uint256 noVotes
-    ) {
+
+    function getVote(uint256 projectId, uint256 voteId)
+        public view
+        returns (
+            string memory description,
+            address proposer,
+            uint256 createdAt,
+            uint256 expiresAt,
+            VoteStatus status,
+            uint256 yesVotes,
+            uint256 noVotes
+        )
+    {
         Vote storage vote = votes[projectId][voteId];
         return (
             vote.description,
@@ -431,33 +347,24 @@ contract CollaborationManager is Ownable, ReentrancyGuard {
         );
     }
 
-    /**
-     * @dev Get all collaborators for a project
-     * @param projectId Project identifier
-     */
-    function getProjectCollaborators(uint256 projectId) public view validProject(projectId) returns (address[] memory) {
+    function getProjectCollaborators(uint256 projectId)
+        public view validProject(projectId)
+        returns (address[] memory)
+    {
         return projects[projectId].collaboratorList;
     }
 
-    /**
-     * @dev Get all votes for a project
-     * @param projectId Project identifier
-     */
-    function getProjectVotes(uint256 projectId) public view validProject(projectId) returns (uint256[] memory) {
+    function getProjectVotes(uint256 projectId)
+        public view validProject(projectId)
+        returns (uint256[] memory)
+    {
         return projectVotes[projectId];
     }
 
-    /**
-     * @dev Get projects for a user
-     * @param user User address
-     */
     function getUserProjects(address user) public view returns (uint256[] memory) {
         return userProjects[user];
     }
 
-    /**
-     * @dev Get total number of projects
-     */
     function getTotalProjects() public view returns (uint256) {
         return _projectIdCounter.current();
     }
