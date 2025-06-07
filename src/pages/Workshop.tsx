@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -23,7 +22,7 @@ const Workshop = () => {
   const comicIdParam = searchParams.get('comic');
   
   const { isConnected, connectWallet } = useWallet();
-  const { comics, createComic, isLoading } = useComics();
+  const { comics, createComic, loading } = useComics();
   
   const [currentComic, setCurrentComic] = useState<any>(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -61,8 +60,7 @@ const Workshop = () => {
     createComic({
       title: newComicTitle,
       description: newComicDescription,
-      genre: newComicGenre || 'adventure',
-      status: 'draft'
+      genre: newComicGenre || 'adventure'
     });
 
     // Reset form
@@ -90,7 +88,7 @@ const Workshop = () => {
     setIsWalletModalOpen(false);
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <MainLayout>
         <div className="container max-w-7xl mx-auto px-4 py-8 flex items-center justify-center">
